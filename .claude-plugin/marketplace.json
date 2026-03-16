@@ -1,0 +1,21 @@
+{
+  "name": "ezra",
+  "owner": {
+    "name": "Shlomi Hod"
+  },
+  "metadata": {
+    "description": "AI-powered document review tools for Claude Code"
+  },
+  "plugins": [
+    {
+      "name": "ezra",
+      "source": "./",
+      "description": "AI document review with tracked changes and comments",
+      "author": { "name": "Shlomi Hod" },
+      "repository": "https://github.com/shlomihod/ezra",
+      "license": "MIT",
+      "keywords": ["document-review", "tracked-changes", "comments", "editor"],
+      "category": "productivity"
+    }
+  ]
+}

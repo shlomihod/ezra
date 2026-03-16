@@ -1,0 +1,12 @@
+{
+  "name": "ezra",
+  "version": "0.1.0",
+  "description": "AI document review with tracked changes and comments",
+  "author": {
+    "name": "Shlomi Hod",
+    "url": "https://github.com/shlomihod"
+  },
+  "repository": "https://github.com/shlomihod/ezra",
+  "license": "MIT",
+  "keywords": ["document-review", "tracked-changes", "comments", "editor", "prosemirror"]
+}
