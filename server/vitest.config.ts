@@ -6,5 +6,6 @@ export default defineConfig({
     environment: "node",
     exclude: ["dist/**", "node_modules/**"],
     env: { EZRA_DB_PATH: ":memory:" },
+    server: { deps: { inline: ["zod"] } },
   },
 });

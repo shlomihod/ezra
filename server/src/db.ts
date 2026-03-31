@@ -1,4 +1,4 @@
-import Database, { type Database as DatabaseType } from "better-sqlite3";
+import { Database } from "bun:sqlite";
 import path from "path";
 import fs from "fs";
 
@@ -12,10 +12,10 @@ const dbPath = resolveDbPath();
 if (dbPath !== ":memory:") {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 }
-const db: DatabaseType = new Database(dbPath);
+const db = new Database(dbPath);
 
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
+db.run("PRAGMA journal_mode = WAL");
+db.run("PRAGMA foreign_keys = ON");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS documents (
@@ -57,7 +57,7 @@ db.exec(`
 // --- Document CRUD ---
 
 export function listDocuments() {
-  return db.prepare("SELECT id, title, created_at, updated_at FROM documents ORDER BY updated_at DESC").all() as {
+  return db.query("SELECT id, title, created_at, updated_at FROM documents ORDER BY updated_at DESC").all() as {
     id: string;
     title: string;
     created_at: string;
@@ -66,7 +66,7 @@ export function listDocuments() {
 }
 
 export function getDocument(id: string) {
-  return db.prepare("SELECT * FROM documents WHERE id = ?").get(id) as
+  return db.query("SELECT * FROM documents WHERE id = ?").get(id) as
     | { id: string; title: string; content: string; created_at: string; updated_at: string }
     | undefined;
 }
@@ -78,11 +78,11 @@ export function getDocOrThrow(id: string) {
 }
 
 export function createDocument(id: string, title: string, content: string) {
-  db.prepare("INSERT INTO documents (id, title, content) VALUES (?, ?, ?)").run(id, title, content);
+  db.query("INSERT INTO documents (id, title, content) VALUES (?, ?, ?)").run(id, title, content);
 }
 
 export function updateDocumentContent(id: string, content: string) {
-  db.prepare("UPDATE documents SET content = ?, updated_at = datetime('now') WHERE id = ?").run(content, id);
+  db.query("UPDATE documents SET content = ?, updated_at = datetime('now') WHERE id = ?").run(content, id);
 }
 
 /**
@@ -90,15 +90,15 @@ export function updateDocumentContent(id: string, content: string) {
  */
 export const updateAndLog: (docId: string, content: string, opType: string, details: string | null) => void = db.transaction(
   (docId: string, content: string, opType: string, details: string | null) => {
-    db.prepare("UPDATE documents SET content = ?, updated_at = datetime('now') WHERE id = ?").run(content, docId);
-    db.prepare("INSERT INTO operations (type, doc_id, details) VALUES (?, ?, ?)").run(opType, docId, details);
+    db.query("UPDATE documents SET content = ?, updated_at = datetime('now') WHERE id = ?").run(content, docId);
+    db.query("INSERT INTO operations (type, doc_id, details) VALUES (?, ?, ?)").run(opType, docId, details);
   }
 );
 
 // --- Thread CRUD ---
 
 export function getThreadsForDoc(docId: string) {
-  const rows = db.prepare(`
+  const rows = db.query(`
     SELECT t.id, t.doc_id, t.anchor_text, t.status, t.created_at,
            r.id as reply_id, r.author as reply_author, r.body as reply_body, r.created_at as reply_created_at
     FROM threads t
@@ -152,23 +152,23 @@ export function getThreadsForDoc(docId: string) {
 }
 
 export function getThread(id: string) {
-  return db.prepare("SELECT * FROM threads WHERE id = ?").get(id) as
+  return db.query("SELECT * FROM threads WHERE id = ?").get(id) as
     | { id: string; doc_id: string; anchor_text: string; status: string; created_at: string }
     | undefined;
 }
 
 export function createThread(id: string, docId: string, anchorText: string) {
-  db.prepare("INSERT INTO threads (id, doc_id, anchor_text) VALUES (?, ?, ?)").run(id, docId, anchorText);
+  db.query("INSERT INTO threads (id, doc_id, anchor_text) VALUES (?, ?, ?)").run(id, docId, anchorText);
 }
 
 export function resolveThread(id: string) {
-  db.prepare("UPDATE threads SET status = 'resolved' WHERE id = ?").run(id);
+  db.query("UPDATE threads SET status = 'resolved' WHERE id = ?").run(id);
 }
 
 // --- Reply CRUD ---
 
 export function getRepliesForThread(threadId: string) {
-  return db.prepare("SELECT * FROM replies WHERE thread_id = ? ORDER BY created_at ASC").all(threadId) as {
+  return db.query("SELECT * FROM replies WHERE thread_id = ? ORDER BY created_at ASC").all(threadId) as {
     id: string;
     thread_id: string;
     author: string;
@@ -178,17 +178,17 @@ export function getRepliesForThread(threadId: string) {
 }
 
 export function createReply(id: string, threadId: string, author: string, body: string) {
-  db.prepare("INSERT INTO replies (id, thread_id, author, body) VALUES (?, ?, ?, ?)").run(id, threadId, author, body);
+  db.query("INSERT INTO replies (id, thread_id, author, body) VALUES (?, ?, ?, ?)").run(id, threadId, author, body);
 }
 
 // --- Operations log ---
 
 export function logOperation(type: string, docId: string | null, details: string | null) {
-  db.prepare("INSERT INTO operations (type, doc_id, details) VALUES (?, ?, ?)").run(type, docId, details);
+  db.query("INSERT INTO operations (type, doc_id, details) VALUES (?, ?, ?)").run(type, docId, details);
 }
 
 export function getOperationsSince(cursor: number) {
-  return db.prepare("SELECT * FROM operations WHERE id > ? ORDER BY id").all(cursor) as {
+  return db.query("SELECT * FROM operations WHERE id > ? ORDER BY id").all(cursor) as {
     id: number;
     type: string;
     doc_id: string | null;
@@ -198,10 +198,10 @@ export function getOperationsSince(cursor: number) {
 }
 
 export function clearAll() {
-  db.exec("DELETE FROM replies");
-  db.exec("DELETE FROM threads");
-  db.exec("DELETE FROM operations");
-  db.exec("DELETE FROM documents");
+  db.run("DELETE FROM replies");
+  db.run("DELETE FROM threads");
+  db.run("DELETE FROM operations");
+  db.run("DELETE FROM documents");
 }
 
 export default db;

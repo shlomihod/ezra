@@ -9,13 +9,13 @@ export default defineConfig({
   use: { baseURL },
   webServer: isCI
     ? {
-        command: "npm start",
+        command: "bun run start",
         url: baseURL,
         reuseExistingServer: false,
         timeout: 30000,
       }
     : {
-        command: "npm run dev:server & npm run dev:client",
+        command: "bun run dev:server & bun run dev:client",
         url: baseURL,
         reuseExistingServer: true,
         timeout: 30000,

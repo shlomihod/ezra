@@ -1,12 +1,7 @@
-#!/usr/bin/env node
-
-import { fileURLToPath } from "url";
-import path from "path";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+#!/usr/bin/env bun
 
 // Start the server
-await import(path.resolve(__dirname, "../server/dist/index.js"));
+await import("../server/src/index.ts");
 
 // Open the browser after a short delay (skip in CI)
 if (!process.env.CI) {
