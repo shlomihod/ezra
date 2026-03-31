@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "bun install --no-summary && bun src/stdio.ts",
+    "start": "bun install --no-summary && ([ -f ../client/dist/index.html ] || (cd ../client && bunx vite build >&2)) && bun src/stdio.ts",
     "build": "tsc --noEmit",
     "dev": "bun --watch src/index.ts",
     "test": "bun --bun vitest run",
