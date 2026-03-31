@@ -1,5 +1,8 @@
 # Ezra
 
+## Runtime
+- The server requires [Bun](https://bun.sh)
+
 ## Testing
 - Run `npm test` before considering any change complete
 - Run `npm run build` to verify TypeScript compilation

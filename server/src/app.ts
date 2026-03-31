@@ -3,7 +3,6 @@ import cors from "cors";
 import helmet from "helmet";
 import { createServer } from "http";
 import path from "path";
-import { fileURLToPath } from "url";
 import { z } from "zod";
 
 import "./db.js"; // initialize database
@@ -39,7 +38,7 @@ const CreateDocumentSchema = z.object({
   title: z.string().min(1).max(200),
 });
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dir;
 
 import { PORT } from "./config.js";
 

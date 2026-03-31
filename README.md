@@ -30,8 +30,7 @@ Then use the skill:
 ```bash
 git clone https://github.com/shlomihod/ezra.git
 cd ezra
-npm install
-npm run build
+bun install
 ```
 
 Then from your project directory:
@@ -64,8 +63,8 @@ claude --plugin-dir /path/to/ezra
 ## Development
 
 ```bash
-npm run dev:server   # server with hot reload
-npm run dev:client   # Vite dev server
+bun run dev:server   # server with hot reload
+bun run dev:client   # Vite dev server
 npm test             # unit tests (server + client)
 npm run test:e2e     # Playwright end-to-end tests
 ```
