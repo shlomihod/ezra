@@ -22,7 +22,7 @@ import { extractPlainText } from "../prosemirror/helpers.js";
 
 vi.mock("open", () => ({ default: vi.fn() }));
 vi.mock("../app.js", () => ({
-  createApp: () => ({ server: { listen: vi.fn((_port: number, cb?: () => void) => cb?.()) } }),
+  createApp: () => ({ server: { listen: vi.fn((_port: number, cb?: () => void) => cb?.()), once: vi.fn() } }),
 }));
 
 const DOC_ID = "test-doc-tools-" + nanoid(6);
