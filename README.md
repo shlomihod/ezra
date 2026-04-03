@@ -19,10 +19,14 @@ Ezra provides Claude with MCP tools to review, edit, and annotate documents in a
 /plugin marketplace add shlomihod/ezra
 ```
 
-Then use the skill:
+Then use a skill:
+
+- `/workshop` — Collaborative editing: opens a document and acts on your changes and comments
+- `/review` — Document review: Claude reviews a document and suggests changes
 
 ```
-/ezra Review the Consulting Agreement for legal issues
+/workshop Consulting Agreement
+/review Consulting Agreement — check for legal issues
 ```
 
 ## Manual Setup
