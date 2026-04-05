@@ -13,20 +13,18 @@ Ezra provides Claude with MCP tools to review, edit, and annotate documents in a
 - **Direct edits** — make immediate changes when appropriate
 - **Live browser UI** — all changes appear in real-time at `http://localhost:3333`
 
+## Usage
+
+```
+/review Consulting Agreement — check for legal issues
+/workshop Consulting Agreement
+```
+
 ## Install as Claude Code Plugin
 
 ```bash
 /plugin marketplace add shlomihod/ezra
-```
-
-Then use a skill:
-
-- `/workshop` — Collaborative editing: opens a document and acts on your changes and comments
-- `/review` — Document review: Claude reviews a document and suggests changes
-
-```
-/workshop Consulting Agreement
-/review Consulting Agreement — check for legal issues
+/plugin install ezra@ezra
 ```
 
 ## Manual Setup
