@@ -1,7 +1,14 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src"
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    "declaration": false,
+    "declarationMap": false,
+    "module": "nodenext",
+    "moduleResolution": "nodenext"
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["dist", "src/__tests__"]
 }

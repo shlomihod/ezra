@@ -5,16 +5,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "bun install --no-summary && ([ -f ../client/dist/index.html ] || (cd ../client && bunx vite build >&2)) && bun src/stdio.ts",
-    "build": "tsc --noEmit",
-    "dev": "bun --watch src/index.ts",
-    "test": "bun --bun vitest run",
-    "test:watch": "bun --bun vitest"
+    "start": "node dist/stdio.js",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -w & node --watch dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@tiptap/core": "^3.22.1",
     "@tiptap/starter-kit": "^3.22.1",
+    "better-sqlite3": "^11.8.1",
     "cors": "^2.8.6",
     "diff-match-patch": "^1.0.5",
     "express": "^4.22.1",
@@ -28,7 +29,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.11",
+    "@types/better-sqlite3": "^7.6.12",
     "@types/cors": "^2.8.19",
     "@types/diff-match-patch": "^1.0.36",
     "@types/express": "^5.0.6",

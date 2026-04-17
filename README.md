@@ -27,12 +27,17 @@ Ezra provides Claude with MCP tools to review, edit, and annotate documents in a
 /plugin install ezra@ezra
 ```
 
+## Requirements
+
+Ezra requires **Node 22+** and **npm**. On first MCP spawn the plugin runs `npm ci` and builds the server with `tsc` — this takes roughly 20–40 s on a typical link. Subsequent spawns are instant.
+
 ## Manual Setup
 
 ```bash
 git clone https://github.com/shlomihod/ezra.git
 cd ezra
-bun install
+npm ci
+npm run build
 ```
 
 Then from your project directory:
@@ -40,6 +45,8 @@ Then from your project directory:
 ```bash
 claude --plugin-dir /path/to/ezra
 ```
+
+For the local HTTP-server entrypoint (`node bin/ezra.js`), run `npm run build` at the repo root first to populate `client/dist/`.
 
 ## MCP Tools
 
@@ -65,8 +72,8 @@ claude --plugin-dir /path/to/ezra
 ## Development
 
 ```bash
-bun run dev:server   # server with hot reload
-bun run dev:client   # Vite dev server
+npm run dev:server   # server with hot reload (tsc -w & node --watch)
+npm run dev:client   # Vite dev server
 npm test             # unit tests (server + client)
 npm run test:e2e     # Playwright end-to-end tests
 ```
