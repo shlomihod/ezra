@@ -1,7 +1,8 @@
 {
   "mcpServers": {
     "ezra": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/bin/ezra-launch.sh"
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/ezra-launch.js"]
     }
   }
 }
