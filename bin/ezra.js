@@ -1,7 +1,7 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 // Start the server
-await import("../server/src/index.ts");
+await import("../server/dist/index.js");
 
 // Open the browser after a short delay (skip in CI)
 if (!process.env.CI) {

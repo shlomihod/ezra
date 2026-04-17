@@ -9,13 +9,13 @@ export default defineConfig({
   use: { baseURL },
   webServer: isCI
     ? {
-        command: "bun run start",
+        command: "node bin/ezra.js",
         url: baseURL,
         reuseExistingServer: false,
         timeout: 30000,
       }
     : {
-        command: "bun run dev:server & bun run dev:client",
+        command: "npm run dev:server & npm run dev:client",
         url: baseURL,
         reuseExistingServer: true,
         timeout: 30000,

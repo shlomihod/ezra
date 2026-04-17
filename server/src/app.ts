@@ -3,6 +3,8 @@ import cors from "cors";
 import helmet from "helmet";
 import { createServer } from "http";
 import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
 import "./db.js"; // initialize database
@@ -38,7 +40,7 @@ const CreateDocumentSchema = z.object({
   title: z.string().min(1).max(200),
 });
 
-const __dirname = import.meta.dir;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import { PORT } from "./config.js";
 
@@ -180,6 +182,9 @@ export function createApp(opts?: { beforeStaticFiles?: (app: express.Express) =>
 
   // Serve client in production
   const clientDist = path.resolve(__dirname, "../../client/dist");
+  if (!fs.existsSync(clientDist)) {
+    console.warn(`Ezra: client/dist not found at ${clientDist} — static UI will 404. Run \`npm run build\` at the repo root to populate it.`);
+  }
   app.use(express.static(clientDist));
   app.get("*", (_req, res) => {
     res.sendFile(path.join(clientDist, "index.html"));

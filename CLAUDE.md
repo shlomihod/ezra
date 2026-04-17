@@ -1,7 +1,7 @@
 # Ezra
 
 ## Runtime
-- The server requires [Bun](https://bun.sh)
+- The server requires [Node.js](https://nodejs.org) 22+
 
 ## Testing
 - Run `npm test` before considering any change complete
