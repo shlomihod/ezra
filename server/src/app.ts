@@ -186,7 +186,7 @@ export function createApp(opts?: { beforeStaticFiles?: (app: express.Express) =>
     console.warn(`Ezra: client/dist not found at ${clientDist} — static UI will 404. Run \`npm run build\` at the repo root to populate it.`);
   }
   app.use(express.static(clientDist));
-  app.get("*", (_req, res) => {
+  app.get("/{*splat}", (_req, res) => {
     res.sendFile(path.join(clientDist, "index.html"));
   });
 
