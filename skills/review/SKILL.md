@@ -1,8 +1,29 @@
 ---
 name: review
 description: Document review assistant powered by Ezra editor
+argument-hint: "<document or file> — what to review for"
+when_to_use: "Reviewing a document or draft, giving feedback, or checking a contract/proposal/spec for issues."
 disable-model-invocation: false
-allowed-tools: mcp__plugin_ezra_ezra__ezra_list, mcp__plugin_ezra_ezra__ezra_open, mcp__plugin_ezra_ezra__ezra_read, mcp__plugin_ezra_ezra__ezra_edit, mcp__plugin_ezra_ezra__ezra_write, mcp__plugin_ezra_ezra__ezra_suggest, mcp__plugin_ezra_ezra__ezra_comment, mcp__plugin_ezra_ezra__ezra_reply, mcp__plugin_ezra_ezra__ezra_resolve, mcp__plugin_ezra_ezra__ezra_accept, mcp__plugin_ezra_ezra__ezra_reject, mcp__plugin_ezra_ezra__ezra_create, mcp__plugin_ezra_ezra__ezra_threads, mcp__plugin_ezra_ezra__ezra_changes_since, mcp__plugin_ezra_ezra__ezra_import, mcp__plugin_ezra_ezra__ezra_duplicate, Glob, Grep, Read
+allowed-tools:
+  - mcp__plugin_ezra_ezra__ezra_list
+  - mcp__plugin_ezra_ezra__ezra_open
+  - mcp__plugin_ezra_ezra__ezra_read
+  - mcp__plugin_ezra_ezra__ezra_edit
+  - mcp__plugin_ezra_ezra__ezra_write
+  - mcp__plugin_ezra_ezra__ezra_suggest
+  - mcp__plugin_ezra_ezra__ezra_comment
+  - mcp__plugin_ezra_ezra__ezra_reply
+  - mcp__plugin_ezra_ezra__ezra_resolve
+  - mcp__plugin_ezra_ezra__ezra_accept
+  - mcp__plugin_ezra_ezra__ezra_reject
+  - mcp__plugin_ezra_ezra__ezra_create
+  - mcp__plugin_ezra_ezra__ezra_threads
+  - mcp__plugin_ezra_ezra__ezra_changes_since
+  - mcp__plugin_ezra_ezra__ezra_import
+  - mcp__plugin_ezra_ezra__ezra_duplicate
+  - Glob
+  - Grep
+  - Read
 ---
 
 # Ezra — Document Review Assistant
