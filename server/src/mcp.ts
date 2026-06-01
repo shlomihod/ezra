@@ -55,142 +55,147 @@ export function createMcpServer() {
     version: "0.1.0",
   });
 
-  server.tool("ezra_list", "List all documents. Returns titles, IDs, and whether each is currently open in the browser.",
-    {},
-    toolHandler(() => ezraList(), true)
-  );
+  server.registerTool("ezra_list", {
+    description: "List all documents. Returns titles, IDs, and whether each is currently open in the browser.",
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  }, toolHandler(() => ezraList(), true));
 
-  server.tool("ezra_open", "Open a document in the browser.",
-    { doc_id: z.string().describe("The document ID to open") },
-    toolHandler(({ doc_id }) => ezraOpen(doc_id))
-  );
+  server.registerTool("ezra_open", {
+    description: "Open a document in the browser.",
+    inputSchema: { doc_id: z.string().describe("The document ID to open") },
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, toolHandler(({ doc_id }) => ezraOpen(doc_id)));
 
-  server.tool("ezra_read",
-    "Read a document's content as markdown, plus any open comment threads and tracked changes. Tracked insertions appear as [+text+] and deletions as [-text-].",
-    {
+  server.registerTool("ezra_read", {
+    description: "Read a document's content as markdown, plus any open comment threads and tracked changes. Tracked insertions appear as [+text+] and deletions as [-text-].",
+    inputSchema: {
       doc_id: z.string().describe("The document ID to read"),
     },
-    textHandler(({ doc_id }) => ezraRead(doc_id))
-  );
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  }, textHandler(({ doc_id }) => ezraRead(doc_id)));
 
-  server.tool("ezra_edit",
-    "Replace text in a document immediately (not reviewable — use ezra_suggest for tracked changes). old_string must match plain text only — do not include markdown syntax (##, **, *) or tracked change markers ([+text+] / [-text-]) from ezra_read. Must be unique in the document. When old_end is provided, replaces the full span from old_string to old_end (must be in the same paragraph).",
-    {
+  server.registerTool("ezra_edit", {
+    description: "Replace text in a document immediately (not reviewable — use ezra_suggest for tracked changes). old_string must match plain text only — do not include markdown syntax (##, **, *) or tracked change markers ([+text+] / [-text-]) from ezra_read. Must be unique in the document. When old_end is provided, replaces the full span from old_string to old_end (must be in the same paragraph).",
+    inputSchema: {
       doc_id: z.string().describe("The document ID to edit"),
       old_string: z.string().describe("The exact text to find and replace, or the start of a span when old_end is provided (must be unique)"),
       new_string: z.string().describe("The replacement text"),
       old_end: z.string().optional().describe("End of the text span. When provided, old_string marks the start and old_end marks the end — the full text between them is resolved and replaced."),
     },
-    toolHandler(({ doc_id, old_string, new_string, old_end }) => ezraEdit(doc_id, old_string, new_string, old_end))
-  );
+    annotations: { destructiveHint: true, idempotentHint: false, openWorldHint: false },
+  }, toolHandler(({ doc_id, old_string, new_string, old_end }) => ezraEdit(doc_id, old_string, new_string, old_end)));
 
-  server.tool("ezra_write",
-    "Overwrite entire document content. Content is parsed as markdown. Use instead of ezra_edit when replacing all content or writing to an empty document.",
-    {
+  server.registerTool("ezra_write", {
+    description: "Overwrite entire document content. Content is parsed as markdown. Use instead of ezra_edit when replacing all content or writing to an empty document.",
+    inputSchema: {
       doc_id: z.string().describe("The document ID"),
       content: z.string().max(1_000_000).describe("The full document content as markdown. Replaces entire document."),
     },
-    toolHandler(({ doc_id, content }) => ezraWrite(doc_id, content))
-  );
+    annotations: { destructiveHint: true, idempotentHint: false, openWorldHint: false },
+  }, toolHandler(({ doc_id, content }) => ezraWrite(doc_id, content)));
 
-  server.tool("ezra_suggest",
-    "Propose a tracked change (insertion/deletion) for the human to accept or reject. old_string must match plain text only — do not include markdown syntax (##, **, *) or tracked change markers ([+text+] / [-text-]) from ezra_read. Must be unique in the document. When old_end is provided, the span from old_string to old_end is used (must be in the same paragraph).",
-    {
+  server.registerTool("ezra_suggest", {
+    description: "Propose a tracked change (insertion/deletion) for the human to accept or reject. old_string must match plain text only — do not include markdown syntax (##, **, *) or tracked change markers ([+text+] / [-text-]) from ezra_read. Must be unique in the document. When old_end is provided, the span from old_string to old_end is used (must be in the same paragraph).",
+    inputSchema: {
       doc_id: z.string().describe("The document ID"),
       old_string: z.string().describe("The exact text to find, or the start of a span when old_end is provided (must be unique)"),
       new_string: z.string().describe("The suggested replacement text"),
       old_end: z.string().optional().describe("End of the text span. When provided, old_string marks the start and old_end marks the end — the full text between them is resolved."),
     },
-    toolHandler(({ doc_id, old_string, new_string, old_end }) => ezraSuggest(doc_id, old_string, new_string, old_end))
-  );
+    annotations: { destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  }, toolHandler(({ doc_id, old_string, new_string, old_end }) => ezraSuggest(doc_id, old_string, new_string, old_end)));
 
-  server.tool("ezra_comment",
-    "Create a comment thread anchored to specific text. anchor_text must match plain text only — do not include markdown syntax (##, **, *). When anchor_end is provided, anchors the span from anchor_text to anchor_end.",
-    {
+  server.registerTool("ezra_comment", {
+    description: "Create a comment thread anchored to specific text. anchor_text must match plain text only — do not include markdown syntax (##, **, *). When anchor_end is provided, anchors the span from anchor_text to anchor_end.",
+    inputSchema: {
       doc_id: z.string().describe("The document ID"),
       anchor_text: z.string().describe("The text to anchor the comment to, or the start of a span when anchor_end is provided (must exist in doc)"),
       body: z.string().describe("The comment body (plain text, not markdown)"),
       anchor_end: z.string().optional().describe("End of the anchor span. When provided, anchor_text marks the start and anchor_end marks the end — the full text between them is used as the anchor."),
     },
-    toolHandler(({ doc_id, anchor_text, body, anchor_end }) => ezraComment(doc_id, anchor_text, body, "Claude", anchor_end))
-  );
+    annotations: { destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  }, toolHandler(({ doc_id, anchor_text, body, anchor_end }) => ezraComment(doc_id, anchor_text, body, "Claude", anchor_end)));
 
-  server.tool("ezra_reply", "Reply to an existing comment thread.",
-    {
+  server.registerTool("ezra_reply", {
+    description: "Reply to an existing comment thread.",
+    inputSchema: {
       thread_id: z.string().describe("The thread ID to reply to"),
       body: z.string().describe("The reply body (plain text, not markdown)"),
     },
-    toolHandler(({ thread_id, body }) => ezraReply(thread_id, body))
-  );
+    annotations: { destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  }, toolHandler(({ thread_id, body }) => ezraReply(thread_id, body)));
 
-  server.tool("ezra_resolve", "Resolve a comment thread, optionally with a closing note.",
-    {
+  server.registerTool("ezra_resolve", {
+    description: "Resolve a comment thread, optionally with a closing note.",
+    inputSchema: {
       thread_id: z.string().describe("The thread ID to resolve"),
       body: z.string().optional().describe("Optional closing note (plain text, not markdown)"),
     },
-    toolHandler(({ thread_id, body }) => ezraResolve(thread_id, body))
-  );
+    annotations: { destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  }, toolHandler(({ thread_id, body }) => ezraResolve(thread_id, body)));
 
-  server.tool("ezra_accept",
-    "Accept a tracked change (insertion or deletion). Accepting an insertion keeps the text; accepting a deletion removes the text.",
-    {
+  server.registerTool("ezra_accept", {
+    description: "Accept a tracked change (insertion or deletion). Accepting an insertion keeps the text; accepting a deletion removes the text.",
+    inputSchema: {
       doc_id: z.string().describe("The document ID"),
       text: z.string().describe("The exact text of the tracked change to accept"),
       mark_type: z.enum(["insertion", "deletion"]).optional().describe("Specify if multiple changes match the same text"),
     },
-    toolHandler(({ doc_id, text, mark_type }) => ezraAccept(doc_id, text, mark_type))
-  );
+    annotations: { destructiveHint: true, idempotentHint: true, openWorldHint: false },
+  }, toolHandler(({ doc_id, text, mark_type }) => ezraAccept(doc_id, text, mark_type)));
 
-  server.tool("ezra_reject",
-    "Reject a tracked change (insertion or deletion). Rejecting an insertion removes the text; rejecting a deletion keeps the text.",
-    {
+  server.registerTool("ezra_reject", {
+    description: "Reject a tracked change (insertion or deletion). Rejecting an insertion removes the text; rejecting a deletion keeps the text.",
+    inputSchema: {
       doc_id: z.string().describe("The document ID"),
       text: z.string().describe("The exact text of the tracked change to reject"),
       mark_type: z.enum(["insertion", "deletion"]).optional().describe("Specify if multiple changes match the same text"),
     },
-    toolHandler(({ doc_id, text, mark_type }) => ezraReject(doc_id, text, mark_type))
-  );
+    annotations: { destructiveHint: true, idempotentHint: true, openWorldHint: false },
+  }, toolHandler(({ doc_id, text, mark_type }) => ezraReject(doc_id, text, mark_type)));
 
-  server.tool("ezra_create", "Create a new document. Returns the new document ID.",
-    {
+  server.registerTool("ezra_create", {
+    description: "Create a new document. Returns the new document ID.",
+    inputSchema: {
       title: z.string().min(1).max(200).describe("The document title"),
       content: z.string().max(1_000_000).optional().describe("Optional initial content as ProseMirror JSON string. Defaults to an empty document."),
     },
-    toolHandler(({ title, content }) => ezraCreate(title, content))
-  );
+    annotations: { destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  }, toolHandler(({ title, content }) => ezraCreate(title, content)));
 
-  server.tool("ezra_threads", "Query comment threads for a document. Returns threads with all replies.",
-    {
+  server.registerTool("ezra_threads", {
+    description: "Query comment threads for a document. Returns threads with all replies.",
+    inputSchema: {
       doc_id: z.string().describe("The document ID"),
       status: z.enum(["open", "resolved", "all"]).optional().describe("Filter by status (default: all)"),
     },
-    toolHandler(({ doc_id, status }) => ezraThreads(doc_id, status), true)
-  );
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  }, toolHandler(({ doc_id, status }) => ezraThreads(doc_id, status), true));
 
-  server.tool("ezra_changes_since",
-    "Get all operations (edits, suggestions, comments, etc.) since a given cursor. Returns operations and a next_cursor for polling.",
-    { cursor: z.number().default(0).describe("The operation ID cursor to fetch changes after (0 for all)") },
-    toolHandler(({ cursor }) => ezraChangesSince(cursor), true)
-  );
+  server.registerTool("ezra_changes_since", {
+    description: "Get all operations (edits, suggestions, comments, etc.) since a given cursor. Returns operations and a next_cursor for polling.",
+    inputSchema: { cursor: z.number().default(0).describe("The operation ID cursor to fetch changes after (0 for all)") },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  }, toolHandler(({ cursor }) => ezraChangesSince(cursor), true));
 
-  server.tool("ezra_duplicate",
-    "Duplicate a document. Useful for creating new versions (v2, v3, etc.).",
-    {
+  server.registerTool("ezra_duplicate", {
+    description: "Duplicate a document. Useful for creating new versions (v2, v3, etc.).",
+    inputSchema: {
       doc_id: z.string().describe("The document ID to duplicate"),
       title: z.string().min(1).max(200).optional().describe("Title for the new document (defaults to the original title)"),
     },
-    toolHandler(({ doc_id, title }) => ezraDuplicate(doc_id, title))
-  );
+    annotations: { destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  }, toolHandler(({ doc_id, title }) => ezraDuplicate(doc_id, title)));
 
-  server.tool("ezra_import",
-    "Import content as a new document. Parses as markdown by default; use format: \"text\" for plain text.",
-    {
+  server.registerTool("ezra_import", {
+    description: "Import content as a new document. Parses as markdown by default; use format: \"text\" for plain text.",
+    inputSchema: {
       title: z.string().min(1).max(200).describe("The document title"),
       content: z.string().max(1_000_000).describe("The document content"),
       format: z.enum(["markdown", "text"]).default("markdown").describe("Content format"),
     },
-    toolHandler(({ title, content, format }) => ezraImport(title, content, format))
-  );
+    annotations: { destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  }, toolHandler(({ title, content, format }) => ezraImport(title, content, format)));
 
   return server;
 }
