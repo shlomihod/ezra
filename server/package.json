@@ -18,7 +18,7 @@
     "better-sqlite3": "^11.8.1",
     "cors": "^2.8.6",
     "diff-match-patch": "^1.0.5",
-    "express": "^4.22.1",
+    "express": "^5.2.1",
     "helmet": "^8.1.0",
     "jsdom": "^28.1.0",
     "nanoid": "^5.1.7",
