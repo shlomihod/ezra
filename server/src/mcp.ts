@@ -222,8 +222,9 @@ function cleanupStaleSessions() {
 export function mountMcp(app: Express) {
   const mcpServer = createMcpServer();
 
-  // Periodic cleanup every 5 minutes
-  setInterval(cleanupStaleSessions, 5 * 60 * 1000);
+  // Periodic cleanup every 5 minutes. unref() so this timer never keeps the
+  // process (or a test runner) alive on its own.
+  setInterval(cleanupStaleSessions, 5 * 60 * 1000).unref();
 
   app.post("/mcp", async (req: Request, res: Response) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
