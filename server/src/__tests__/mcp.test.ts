@@ -34,6 +34,7 @@ describe("MCP tool registration", () => {
       const t = tools.find((x) => x.name === name);
       expect(t?.annotations?.destructiveHint, name).toBe(true);
       expect(t?.annotations?.readOnlyHint ?? false, name).toBe(false);
+      expect(t?.annotations?.openWorldHint, name).toBe(false);
     }
   });
 
