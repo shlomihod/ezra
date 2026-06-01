@@ -220,8 +220,6 @@ function cleanupStaleSessions() {
 }
 
 export function mountMcp(app: Express) {
-  const mcpServer = createMcpServer();
-
   // Periodic cleanup every 5 minutes. unref() so this timer never keeps the
   // process (or a test runner) alive on its own.
   setInterval(cleanupStaleSessions, 5 * 60 * 1000).unref();
@@ -257,6 +255,10 @@ export function mountMcp(app: Express) {
       if (id) sessions.delete(id);
     };
 
+    // A McpServer instance binds to a single transport, so each session gets
+    // its own server — reusing one across sessions throws "Already connected
+    // to a transport" on the second session.
+    const mcpServer = createMcpServer();
     await mcpServer.connect(transport);
     await transport.handleRequest(req, res, req.body);
   });
