@@ -1,18 +1,16 @@
 # Ezra Plugin Modernization — Design Spec
 
 - **Date:** 2026-06-01
-- **Status:** Approved (pending spec review)
+- **Status:** Approved (revised after adversarial multi-agent review)
 - **Author:** Shlomi Hod (with Claude)
 
 ## Context & motivation
 
 Ezra is a Claude Code plugin (MCP server + two skills + a React/TipTap editor) currently at
-version `0.1.0`. A verified research sweep of the Claude / Claude Code / MCP ecosystem
-(state as of 2026-06-01) found that Ezra is already current on the highest-stakes items but
-is missing some matured MCP capabilities and is several major versions behind on its
-dependencies.
+version `0.1.0`. A verified research sweep (state as of 2026-06-01) plus an adversarial
+multi-agent review of an earlier draft of this spec shaped the plan below.
 
-What the research **confirmed Ezra already does right** (no action):
+What is **already current / correct** (no action):
 
 - `@modelcontextprotocol/sdk` `^1.29.0` is the latest **stable** release (v2 is alpha-only,
   not on npm). No SDK upgrade.
@@ -21,234 +19,227 @@ What the research **confirmed Ezra already does right** (no action):
   `allowed-tools` coverage are all correct.
 - No hardcoded Claude model IDs anywhere.
 
-What it **refuted** (claims that turned out to be optional/false, so excluded here):
+**Verified non-blockers** (claims that were investigated and *rejected*, so they do not gate
+the work):
 
-- Tool annotations are **advisory hints, not mandatory**, and do not cause tool-call
-  rejection.
-- Declaring `skills` / `mcpServers` in `plugin.json` is **optional** (both auto-discovered).
-- The suggested `$schema` URL for `plugin.json` appears fabricated.
+- SDK `1.29.0` **is** compatible with zod 4 — its `peerDependencies` are
+  `"zod": "^3.25 || ^4.0"` and it ships a runtime compat layer (empirically tested green).
+- TipTap 3 (`@tiptap/react`) **does** support React 19 — peer-deps include `^19.0.0` and the
+  changelog confirms it.
 
-The installed SDK (`1.29.0`) marks the old `server.tool(...)` signature as
-`@deprecated Use registerTool instead`, and exposes:
+What it **refuted as optional/false** (excluded here): tool annotations are advisory hints,
+not mandatory; declaring `skills`/`mcpServers` in `plugin.json` is optional (auto-discovered);
+the suggested `$schema` URL appears fabricated.
 
-```ts
-registerTool(name, {
-  title?, description?, inputSchema?, outputSchema?, annotations?, _meta?
-}, cb): RegisteredTool
-```
-
-The tool callback "should return `structuredContent` if the tool has an `outputSchema`
-defined, `content` if not — both fields are optional but typically one should be provided."
-This confirms we can add `outputSchema`/`structuredContent` while still returning text for
-backwards-compatibility and display.
+The installed SDK marks the old `server.tool(...)` signature `@deprecated Use registerTool`
+and exposes `registerTool(name, { title?, description?, inputSchema?, outputSchema?,
+annotations? }, cb)`.
 
 ## Goals
 
-1. Adopt matured MCP capabilities Ezra doesn't yet use: modern `registerTool` API, tool
-   annotations, and structured tool output.
-2. Polish skill/plugin metadata to current authoring conventions.
-3. Bring all dependencies up to their current major versions.
+1. Bring all dependencies up to their current major versions.
+2. Adopt the modern `registerTool` API and tool annotations (MCP hygiene / future-proofing).
+3. Polish skill/plugin metadata to current authoring conventions.
 
 ## Non-goals (explicitly out of scope)
 
-- MCP resources / `resource_link` (exposing docs as `@`-mentionable resources).
-- MCP SDK v2 (alpha-only, not on npm).
-- MCP 2026-07-28 RC features (stateless core, Tasks, MCP Apps).
+- **Structured tool output** (`outputSchema` / `structuredContent`). Cut as YAGNI: Ezra's
+  tools already return JSON-as-text, the only MCP consumer is Claude (via the skills), and
+  there is no non-LLM/programmatic consumer that would use a typed channel. Revisit only if
+  such a consumer appears.
+- MCP resources / `resource_link`.
+- MCP SDK v2 (alpha-only, not on npm) and MCP 2026-07-28 RC features.
 - Plugin hooks or agents/subagents.
+- Opting into the React Compiler (pulled in as a `@vitejs/plugin-react@6` option — not worth
+  it for an editor this size).
 - Pinning a `model:` in skill frontmatter.
 - **Any version bump.** `plugin.json`, the `McpServer` version string, and workspace
-  `package.json` versions all stay at `0.1.0` (explicit user decision).
+  `package.json` versions stay at `0.1.0` (hard user constraint).
 
 ## Constraints
 
 - **Keep `0.1.0` everywhere.** No version changes.
 - Per `CLAUDE.md`: after every change, write/update tests, run `npm test`, run `npm run build`.
-- Confirm exact latest dependency versions via `npm` at implementation time — the researched
-  numbers below are approximate and must be re-checked.
-- Follow existing code patterns (ESM, the `toolHandler`/`textHandler` wrapper style, vitest).
+- Confirm exact latest dependency versions via `npm` at implementation time — numbers below
+  are approximate and must be re-checked.
+- Follow existing code patterns (ESM, the `toolHandler`/`textHandler` wrappers, vitest).
 
 ## Delivery plan
 
-Three isolated PRs, in dependency order. Each is independently reviewable and verified
-before the next begins.
+Four isolated PRs. Dependencies first, split by blast radius (the review showed bundling
+8+ majors across server **and** client into one PR lets a risky client breakage block the
+trivially-safe server bumps).
 
-1. **PR 1 — Dependency upgrades** (establishes the new baseline)
-2. **PR 2 — MCP tool modernization** (written against the new deps)
-3. **PR 3 — Skill & plugin metadata polish**
+1. **PR 1 — Server dependency upgrades** (low risk; includes the load-bearing express-5 fix)
+2. **PR 2 — Client dependency upgrades** (the risky react/vite/TipTap cluster; app-verified)
+3. **PR 3 — MCP tool modernization** (`registerTool` + annotations)
+4. **PR 4 — Skill & plugin metadata polish**
 
-**Rationale for the order:** zod 4 and TypeScript 6 land first so PR 2's tool rewrite is
-authored against the final versions (no rework). The riskiest changes (react/vite) are
-isolated in PR 1 and verified before any feature work.
+**Ordering rationale (corrected):** the order is about **isolating dependency blast radius
+and landing the new toolchain (zod 4 / TS 6) before the MCP rewrite touches tool schemas** —
+*not* about avoiding zod-driven rework (the SDK accepts zod 3 or 4 shapes either way, so PR 3
+does not strictly depend on PR 1).
+
+**Rollback note (no version bump):** because the published version stays `0.1.0`, there is no
+semver signal to roll back. If a merged change breaks installed users, recovery is a revert
+commit on `main`; users pick it up when the plugin cache refreshes for `0.1.0`. Keep each PR
+revertable in isolation.
 
 ---
 
-## PR 1 — Dependency upgrades
+## PR 1 — Server dependency upgrades
 
-Bump all dependencies to their current major versions. Apply per-cluster, running
-`npm test` + `npm run build` after each cluster and fixing breakages before moving on.
-
-**Server (`server/package.json`):**
+Scope: `server/package.json` (+ `server/src/app.ts`, tests). Apply per-cluster; run
+`npm test` + `npm run build` after each and fix breakages before moving on.
 
 | Package | From | To (approx — confirm via npm) | Watch for |
 |---|---|---|---|
-| `zod` | `^3.25` | `^4` | error/message customization API changes; `.parse` error shape |
-| `express` | `^4.22` | `^5` | `path-to-regexp` v5 route patterns, middleware error handling. Fixes the existing `@types/express ^5` vs runtime-v4 mismatch. |
-| `better-sqlite3` | `^11.8` | `^12` | native module — confirm prebuilt binary fetched on Node 22 (launcher `npm ci` path) |
+| `zod` | `^3.25` | `^4` | **`.default()` fields now land in JSON-schema `required`** — verify the generated inputSchema for `ezra_changes_since` (`cursor`) and `ezra_import` (`format`); add `.optional()` / restructure if they become required. Error/message API changes. |
+| `express` | `^4.22` | `^5` | **path-to-regexp v8 breaking change — see required fix below.** Middleware error handling; helmet/cors behavior under v5. |
+| `better-sqlite3` | `^11.8` | `^12` | native module — confirm a prebuilt binary is fetched on Node 22 (see clean-spawn check) |
 | `jsdom` | `^28` | `^29` | HTML parsing edge cases in markdown/tracked-change tests |
-| `open` | `^10` | `^11` | smoke-test `ezra_open` launching a browser tab |
-| `typescript` | `^5.9` | `^6` | newly-flagged type errors; removed compiler options in `tsconfig` |
+| `open` | `^10` | `^11` | smoke-test `ezra_open` |
+| `typescript` | `^5.9` | `^6` | review **both** `tsconfig.json` for removed/deprecated options (`baseUrl`, `downlevelIteration`); use `ignoreDeprecations: "6.0"` if needed |
+| `@types/node`, `@types/better-sqlite3`, `@types/jsdom` | current | align with runtime majors | type mismatches after the bumps |
+| `@tiptap/core`, `@tiptap/starter-kit`, `tiptap-markdown` (server) | `^3.22`, `^0.9` | latest 3.x / evaluate | server-side markdown round-tripping; `markdown.test.ts` is the guard |
+| **root** `@playwright/test` | `^1.59` | bump or explicitly hold | CI `playwright install` step |
 
-**Client (`client/package.json`):**
+**REQUIRED express-5 fix (CRITICAL — would otherwise crash the server at startup):**
+`server/src/app.ts:189` is `app.get("*", ...)` (the SPA fallback). Under express 5 a bare `*`
+throws `TypeError: Missing parameter name at position 1` **at `createApp()` time**, before the
+server listens. Change it to `app.get("/{*splat}", ...)` (braces, so it still matches `/`).
 
-| Package | From | To (approx — confirm via npm) | Watch for |
-|---|---|---|---|
-| `react`, `react-dom` (+ `@types/*`) | `^18.3` | `^19` | React 19 codemods (forwardRef/defaultProps); TipTap 3 compatibility with React 19 |
-| `vite` | `^6.4` | `^8` | config/option changes across v7→v8, Rolldown bundler defaults |
-| `@vitejs/plugin-react` | `^4.7` | `^6` | coupled with the vite bump |
-| `jsdom` | `^28` | `^29` | test env |
-| `typescript` | `^5.9` | `^6` | as above |
+**Test-coverage gap (must address):** the real `app.ts` is exercised by **zero** unit tests —
+`api.test.ts` builds its own inline express app (no helmet, no wildcard route) and
+`tools.test.ts`/`open.test.ts` mock `app.js`. The spec's earlier "covered by supertest" claim
+was false. Add a **startup smoke test** that imports and calls `createApp()` and asserts it
+does not throw (catches the wildcard/route-syntax break deterministically, not via a 30s e2e
+timeout).
 
 **Verification (PR 1):**
 
-- `npm test` (server + client) green.
-- `npm run build` clean (both workspaces).
-- Launch the app (server + client), confirm: the document list loads, the editor opens a
+- `npm test --workspace=server` + `npm run build` green.
+- New `createApp()` smoke test green.
+- **Clean-spawn check** (validates the launcher's exact path + the native binary):
+  `rm -rf node_modules server/node_modules node_modules/.ezra-built` then a fresh `npm ci` +
+  `npm run build` — confirm `better-sqlite3` resolves a prebuilt binary on Node 22 with no
+  source-build fallback.
+
+---
+
+## PR 2 — Client dependency upgrades
+
+Scope: `client/package.json` (+ `client/vite.config.ts`, tests). The highest-risk cluster —
+gated on real app launch, not just unit tests.
+
+| Package | From | To (approx — confirm via npm) | Watch for |
+|---|---|---|---|
+| `react`, `react-dom` (+ `@types/react`, `@types/react-dom`) | `^18.3` | `^19` | React 19 codemods; StrictMode/ref behavior in the TipTap editor. (TipTap 3 React-19 support is **confirmed**, so this is a verification note, not a gate.) |
+| `vite` | `^6.4` | `^8` | two-major jump; Rolldown bundler defaults (v8 ships a config compat layer); options changed across v7→v8 |
+| `@vitejs/plugin-react` | `^4.7` | `^6` | peer deps (react-compiler / rolldown-babel) — **do not** enable React Compiler; confirm vite-8 compatible version |
+| `jsdom` (dev) | `^28` | `^29` | test env |
+| `typescript` | `^5.9` | `^6` | as PR 1 |
+
+**Verification (PR 2):**
+
+- `npm test --workspace=client` + `npm run build` green.
+- **App launch:** start server + client; confirm the document list loads, the editor opens a
   document, tracked changes (insertions/deletions) and comment threads render, and one MCP
-  round-trip works (e.g. `ezra_import` → `ezra_open` → `ezra_suggest`).
+  round-trip works (`ezra_import` → `ezra_open` → `ezra_suggest`). Explicitly confirm the
+  TipTap editor renders and accepts input under React 19 (no console errors).
 - `npm run test:e2e` (Playwright) green.
 
 ---
 
-## PR 2 — MCP tool modernization
+## PR 3 — MCP tool modernization
 
-Scope: `server/src/mcp.ts` (+ tests). Migrate all 16 tools from the deprecated
-`server.tool(name, desc, shape, handler)` to `server.registerTool(name, config, handler)`,
-adding annotations and structured output.
+Scope: `server/src/mcp.ts` (+ a new test). Migrate all 16 tools from the deprecated
+`server.tool(name, desc, shape, handler)` to `server.registerTool(name, { description,
+inputSchema, annotations }, handler)`, and add annotations.
 
-### 2a. registerTool migration
+**Honest framing (verified):** this is **MCP hygiene / future-proofing, not a user-facing
+improvement**. Tool annotations do **not** change Claude Code CLI behavior — CLI MCP
+permissions are governed by the `allowed-tools` allowlists the skills already declare, and
+`readOnlyHint`-based auto-approval is an *unimplemented* feature request. Annotations benefit
+Claude Desktop confirmation UX and a possible future Connectors Directory submission. The
+`registerTool` migration only suppresses a deprecation tag (the old API still works at
+runtime; v2 is out of scope). It is cheap and zero-risk, which is why it stays in.
 
-For each tool, move to:
-
-```ts
-server.registerTool("ezra_list", {
-  description: "...",
-  inputSchema: { /* the existing zod raw shape */ },
-  outputSchema: { /* see 2c, where applicable */ },
-  annotations: { /* see 2b */ },
-}, handler);
-```
+### 3a. registerTool migration
 
 The existing zod raw-shape objects become `inputSchema`. Tools with no inputs (`ezra_list`)
-pass `inputSchema: {}` or omit it.
+omit `inputSchema`. The `toolHandler`/`textHandler` wrappers stay as-is (they already return
+`{ content: [{ type: "text", text }] }`, optionally `isError`) — **no structured output**.
 
-### 2b. Tool annotations
+### 3b. Tool annotations
 
-Add `annotations` to every tool. `openWorldHint: false` on all (closed local domain).
-Only the hints that apply are set; defaults cover the rest.
+`openWorldHint: false` on all tools (closed local domain). Only applicable hints are set.
 
 | Tool | readOnlyHint | destructiveHint | idempotentHint |
 |---|:---:|:---:|:---:|
-| `ezra_list` | true | — | — |
-| `ezra_read` | true | — | — |
-| `ezra_threads` | true | — | — |
-| `ezra_changes_since` | true | — | — |
+| `ezra_list`, `ezra_read`, `ezra_threads`, `ezra_changes_since` | true | — | — |
 | `ezra_open` | — | false | true |
-| `ezra_create` | — | false | false |
-| `ezra_import` | — | false | false |
-| `ezra_duplicate` | — | false | false |
-| `ezra_suggest` | — | false | false |
-| `ezra_comment` | — | false | false |
-| `ezra_reply` | — | false | false |
-| `ezra_resolve` | — | false | true |
-| `ezra_edit` | — | true | false |
-| `ezra_write` | — | true | false |
-| `ezra_accept` | — | true | true |
-| `ezra_reject` | — | true | true |
+| `ezra_create`, `ezra_import`, `ezra_duplicate`, `ezra_suggest`, `ezra_comment`, `ezra_reply` | — | false | false |
+| `ezra_resolve` | — | false | false |
+| `ezra_edit`, `ezra_write` | — | true | false |
+| `ezra_accept`, `ezra_reject` | — | true | true |
 
-Notes: `ezra_open` has a side effect (sets the doc's open state / opens a browser tab) so it
-is not read-only, but it is non-destructive and idempotent. `ezra_suggest`/`ezra_comment`/
-`ezra_reply` *add* data (not destructive) but are not idempotent (re-running adds another
-suggestion/comment). `ezra_accept`/`ezra_reject` modify document content (destructive) but
-re-applying the same accept/reject is a no-op (idempotent).
+Review corrections applied: `ezra_resolve` is **not** idempotent (a closing note has lasting
+effect) → `idempotentHint: false`. `ezra_open` stays non-destructive (it changes which doc is
+open / opens a tab; it does not destroy document data) — flagged by a reviewer as debatable,
+but kept as non-destructive since these hints are advisory and low-stakes.
 
-### 2c. Structured output
+### 3c. Tests (PR 3)
 
-Add `outputSchema` + return `structuredContent` for the tools that return structured data
-today via `JSON.stringify`. `structuredContent` must be a JSON **object**, so array results
-are wrapped:
-
-| Tool | structuredContent shape |
-|---|---|
-| `ezra_list` | `{ documents: [...] }` |
-| `ezra_threads` | `{ threads: [...] }` |
-| `ezra_changes_since` | `{ operations: [...], next_cursor: number }` (already an object) |
-
-Mutation tools that return a small result object (e.g. `ezra_create` → `{ doc_id }`,
-`ezra_import`/`ezra_duplicate` → `{ doc_id }`, `ezra_edit`/`ezra_suggest` → operation result)
-also get an `outputSchema` + `structuredContent` where the result is genuinely structured.
-`ezra_read` stays **text** (markdown) — it is a document rendering, not structured data — so
-it gets annotations but no `outputSchema`.
-
-**Backwards-compatibility:** every tool continues to return `content: [{ type: "text", ... }]`
-in addition to `structuredContent`. Where `outputSchema` is defined, the SDK validates
-`structuredContent` against it, so the handler must always populate it.
-
-### 2d. Wrapper changes
-
-Update `toolHandler` / `textHandler` in `server/src/mcp.ts` so a handler can return both
-`content` (text) and `structuredContent`. Keep the `errorResult` path (`isError: true`)
-unchanged. Update the `McpServer` instantiation only as needed for the new API — **do not
-change its `version: "0.1.0"`.**
-
-### 2e. Tests (PR 2)
-
-- Extend `server/src/__tests__/tools.test.ts` / `api.test.ts` to assert: each tool's
-  annotations are present and correct; `outputSchema` tools return `structuredContent` that
-  validates against the schema; text `content` is still returned for back-compat.
-- `npm test` + `npm run build` green.
+The current tests do **not** exercise the MCP server layer at all (`tools.test.ts` calls the
+underlying `ezra*` functions directly; nothing boots `createMcpServer()`). So "extend
+tools.test.ts" is insufficient — add a **new `server/src/__tests__/mcp.test.ts`** that
+instantiates `createMcpServer()` and asserts, via the registered tool definitions / a
+`listTools` call (in-memory transport), that every tool is present and its annotations match
+3b. `npm test` + `npm run build` green.
 
 ---
 
-## PR 3 — Skill & plugin metadata polish
+## PR 4 — Skill & plugin metadata polish
 
 Lightweight, no version changes.
 
-### 3a. Skill frontmatter (`skills/review/SKILL.md`, `skills/workshop/SKILL.md`)
+### 4a. Skill frontmatter (`skills/review/SKILL.md`, `skills/workshop/SKILL.md`)
 
-- Add `when_to_use:` describing trigger phrases (e.g. for `review`: "reviewing a document,
-  giving feedback, checking a draft/contract/proposal for issues"; for `workshop`: "opening a
-  document for the user to edit collaboratively, then acting on their changes/comments").
-- Add `argument-hint:` showing expected args (e.g. `<document or file> — <what to do>`).
-- Convert `allowed-tools` from the single comma-separated string to a YAML list (functionally
-  equivalent, more readable). Preserve the exact same tool IDs.
+- Add `when_to_use:` (trigger phrases) and `argument-hint:` (e.g. `<document or file> — <what
+  to do>`). Confirm these keys are valid in the installed Claude Code before relying on them.
+- Convert `allowed-tools` from the comma-separated string to a YAML list (same tool IDs).
 
-### 3b. CLAUDE.md
+### 4b. CLAUDE.md & README
 
-- Verify `claude plugin validate` exists in the current CLI. **Only if it does**, add a line
-  to the Testing/After-every-change section: `claude plugin validate .` (validates
-  `plugin.json`, skill frontmatter, component structure). If it does not exist, skip silently.
+- Verify `claude plugin validate` exists in the installed CLI (`claude plugin --help`).
+  **Only if it does**, add `claude plugin validate .` to the test workflow; else skip.
+- Update the README MCP-tools table / `ezra_read` wording if any tool description text changed
+  in PR 3 (own the README drift here so it doesn't go stale).
 
-### 3c. Verification (PR 3)
+### 4c. Verification (PR 4)
 
-- `npm test` + `npm run build` green (no functional code changed, but run per `CLAUDE.md`).
+- `npm test` + `npm run build` green.
 - `claude plugin validate .` passes (if available).
-- Skills still load and `/review` / `/workshop` invoke correctly.
+- `/review` and `/workshop` still load and invoke correctly.
 
 ---
 
 ## Risks & mitigations
 
-- **React 19 + TipTap 3 / vite 8** is the highest-risk cluster → isolated in PR 1, gated on
-  app-launch + e2e verification, not just unit tests.
-- **express 5** route/middleware changes → covered by supertest API tests; audit routes in
-  `app.ts`/`mcp.ts` for wildcard patterns.
-- **zod 4** error API changes could affect tool input validation messages → covered by tool
-  tests; this is also why zod 4 lands before the PR 2 rewrite.
-- **Annotation misclassification** is low-impact (advisory only) and easily adjusted.
+- **react 19 + vite 8 + TipTap** — isolated in PR 2, gated on app-launch + e2e (not just unit
+  tests). React 19 is the only major with no functional benefit to Ezra, but TipTap-on-React-19
+  is confirmed supported; risk is runtime/StrictMode behavior, caught by e2e.
+- **express 5 `app.get("*")`** — a hard startup crash; addressed by the explicit `/{*splat}`
+  fix + the new `createApp()` smoke test (the old supertest suite never ran the real app).
+- **zod 4 input-schema shift** (`.default()` → `required`) — verified per-tool in PR 1.
+- **better-sqlite3 v12 native build** — validated via the clean-spawn `npm ci` check on Node 22.
+- **Annotation misclassification** — advisory only, low-impact, easily adjusted.
 
 ## Open items to confirm at implementation time
 
-1. Exact latest version of every dependency (via `npm view` / `npm outdated`).
-2. Whether `claude plugin validate` exists in the installed CLI (gates PR 3b).
-3. TipTap 3's official React 19 compatibility (gates the React bump in PR 1).
-4. Final list of mutation tools that warrant an `outputSchema` vs. text-only (PR 2c).
+1. Exact latest version of every dependency (`npm view` / `npm outdated`).
+2. Whether `claude plugin validate` and the `when_to_use` / `argument-hint` SKILL.md keys
+   exist in the installed Claude Code (gate PR 4).
+3. The `better-sqlite3` v12 prebuilt-binary outcome on the actual Node 22 / OS (clean-spawn).
+4. Whether CI (`.github/workflows/ci.yml`) needs any change (Node version, `playwright install`).
